@@ -15,6 +15,24 @@ class Settings:
     tencent_region: str
     storage_dir: str
     data_dir: str
+    ocr_mode: str
+
+
+@dataclass(frozen=True)
+class MissingConfigResult:
+    missing: list[str]
+
+
+BASE_REQUIRED_ENV_MAP = {
+    "FEISHU_APP_ID": "飞书应用 App ID",
+    "FEISHU_APP_SECRET": "飞书应用 App Secret",
+    "FEISHU_VERIFICATION_TOKEN": "飞书事件订阅 Verification Token",
+}
+
+TENCENT_REQUIRED_ENV_MAP = {
+    "TENCENT_SECRET_ID": "腾讯云 SecretId",
+    "TENCENT_SECRET_KEY": "腾讯云 SecretKey",
+}
 
 
 def _getenv(name: str, default: str = "") -> str:
@@ -31,4 +49,19 @@ def get_settings() -> Settings:
         tencent_region=_getenv("TENCENT_REGION", "ap-guangzhou"),
         storage_dir=_getenv("APP_STORAGE_DIR", "storage"),
         data_dir=_getenv("APP_DATA_DIR", "data"),
+        ocr_mode=_getenv("OCR_MODE", "mock").lower(),
     )
+
+
+def get_missing_required_configs() -> MissingConfigResult:
+    settings = get_settings()
+    required = dict(BASE_REQUIRED_ENV_MAP)
+    if settings.ocr_mode == "tencent":
+        required.update(TENCENT_REQUIRED_ENV_MAP)
+
+    missing: list[str] = []
+    for key, desc in required.items():
+        if not _getenv(key):
+            missing.append(f"{key}（{desc}）")
+    return MissingConfigResult(missing=missing)
+
